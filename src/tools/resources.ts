@@ -7,7 +7,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { HetznerConfig, SurfaceName } from "../config.js";
 import { hetznerRequest } from "../http.js";
-import { resultBlocks } from "../format.js";
+import { redactFields, resultBlocks } from "../format.js";
 
 interface ReadDef {
   surface: SurfaceName;
@@ -59,7 +59,9 @@ function makeReadHandler(cfg: HetznerConfig, def: ReadDef) {
       const query =
         def.paginated && (!args.id || def.sub) ? { per_page: 50, ...(args.query ?? {}) } : args.query;
       const result = await hetznerRequest(cfg, { surface: def.surface, path, query });
-      return { content: resultBlocks(result, args.verbose ?? false) };
+      // Robot reads can carry passwords (GET /boot). A read never needs to show one.
+      const shown = def.surface === "robot" ? redactFields(result) : result;
+      return { content: resultBlocks(shown, args.verbose ?? false) };
     } catch (err) {
       return {
         content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],

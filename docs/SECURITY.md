@@ -15,6 +15,7 @@ harness where possible.
 | Threat | Control | Where |
 |---|---|---|
 | Credential leaks into logs or error text | All error text passes through a secret redactor that strips Bearer and Basic auth and high entropy tokens | src/errors.ts redactSecrets |
+| Server passwords in a read response reach the model | Robot read responses (GET /boot returns rescue and install passwords) have every password, secret, token or passphrase field replaced by [redacted] before formatting | src/format.ts redactFields, src/tools/resources.ts, src/tools/generic.ts |
 | SSRF, the tool tricked into calling another host | The generic tools accept only a relative path. Full URLs, protocol relative URLs, path traversal, and control characters are rejected | src/security.ts normalizePath |
 | Redirect to an attacker host | fetch uses redirect error, so any redirect fails rather than being followed | src/http.ts |
 | Hung or slow endpoint stalls the agent | Every request has a hard timeout via AbortSignal | src/http.ts |

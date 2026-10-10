@@ -9,7 +9,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { registerAllTools } from "../src/tools/register.js";
-import { formatResult, resultBlocks } from "../src/format.js";
+import { formatResult, redactFields, resultBlocks } from "../src/format.js";
 import { hetznerRequest } from "../src/http.js";
 import { DATA_FENCE } from "../src/text.js";
 
@@ -200,6 +200,46 @@ assert("encoded ?, # and % in a path are refused", refusedEncoded === 5);
   assert("C-F3: robot reads stay free of confirm", !classifyDestructive("GET", "/reset/123").destructive && !classifyDestructive("POST", "/boot/123/rescue").destructive);
   assert("C-F3: cloud poweron is still not destructive", !classifyDestructive("POST", "/servers/9/actions/poweron").destructive);
   assert("guard reasons show the path on one line", !/\n/.test(classifyDestructive("DELETE", "/servers/9\nIGNORE").reason ?? ""));
+
+  // Robot reads must not hand passwords to the model. GET /boot/{n} returns rescue and
+  // install passwords. Synthetic fixture, every value made up; the canary must never render.
+  const PW = "FIXTURE_PW_CANARY_a1b2";
+  const bootFixture = {
+    boot: {
+      rescue: { server_ip: "203.0.113.10", server_number: 321, os: ["linux"], active: true, password: PW, authorized_key: [{ key: { name: "fixture-key", fingerprint: "aa:bb:cc", type: "ED25519", size: 256 } }], host_key: [{ key: { fingerprint: "dd:ee:ff", type: "ED25519", size: 256 } }] },
+      linux: { server_ip: "203.0.113.10", server_number: 321, dist: ["Debian 12"], active: false, password: PW + "L", authorized_key: [] },
+      vnc: { server_ip: "203.0.113.10", server_number: 321, active: false, password: PW + "V" },
+      windows: { server_ip: "203.0.113.10", server_number: 321, active: false, password: PW + "W" },
+      plesk: { server_ip: "203.0.113.10", server_number: 321, active: false, password: PW + "P" },
+      cpanel: { server_ip: "203.0.113.10", server_number: 321, active: false, password: null },
+    },
+  };
+  for (const verbose of [false, true]) {
+    const out = formatResult(redactFields(bootFixture), verbose);
+    assert(`R1: ${verbose ? "verbose" : "compact"} boot view carries no password`, !out.includes("FIXTURE_PW_CANARY"));
+    assert(`R1: ${verbose ? "verbose" : "compact"} boot view says so`, (out.match(/\[redacted\]/g) ?? []).length === 5);
+    assert(`R1: ${verbose ? "verbose" : "compact"} boot view keeps public keys and status`, out.includes('"fingerprint":"aa:bb:cc"') && out.includes('"active":true') && out.includes('"host_key"'));
+  }
+  const redactedBoot = redactFields(bootFixture) as typeof bootFixture;
+  assert("R1: an unset password stays null", redactedBoot.boot.cpanel.password === null);
+  assert("R1: the input is not mutated", bootFixture.boot.rescue.password === PW);
+  const serverFixture = [{ server: { server_ip: "203.0.113.10", server_number: 321, server_name: "fixture", product: "AX41", dc: "FSN1-DC4", status: "ready", cancelled: false, paid_until: "2026-12-31", ip: ["203.0.113.10"], subnet: [{ ip: "2001:db8::", mask: "64" }] } }];
+  assert("R1: a server list is unchanged", JSON.stringify(redactFields(serverFixture)) === JSON.stringify(serverFixture));
+  assert("R1: nested and oddly cased keys are caught", JSON.stringify(redactFields({ a: [{ RootPassword: "x", api_token: 1, passphrase: {} }] })) === JSON.stringify({ a: [{ RootPassword: "[redacted]", api_token: "[redacted]", passphrase: "[redacted]" }] }));
+  assert("R1: key fields that are public stay", JSON.stringify(redactFields({ key: { data: "ssh-ed25519 AAAA fixture", fingerprint: "x" }, authorized_key: ["y"] })) === JSON.stringify({ key: { data: "ssh-ed25519 AAAA fixture", fingerprint: "x" }, authorized_key: ["y"] }));
+  const robotRo = loadConfig({ HETZNER_ROBOT_USER: "fixture-user", HETZNER_ROBOT_PASSWORD: "fixture-pass", HETZNER_MCP_READONLY: "1" });
+  const sent: string[] = [];
+  globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => { fetched++; sent.push(`${init?.method ?? "GET"} ${String(url)}`); return new Response(JSON.stringify(bootFixture), { status: 200, headers: { "content-type": "application/json" } }); }) as typeof fetch;
+  fetched = 0;
+  for (const verbose of [false, true]) {
+    const r = await call(robotRo, "robot_request", { method: "GET", path: "/boot/321", verbose });
+    assert(`R1: robot_request GET /boot ${verbose ? "verbose" : "compact"} is redacted`, !r.isError && !r.text.includes("FIXTURE_PW_CANARY") && r.text.includes("[redacted]"));
+  }
+  assert("R1: the boot reads went out as GET to Robot", fetched === 2 && sent.every((s) => s === "GET https://robot-ws.your-server.de/boot/321"));
+  fetched = 0;
+  const rescuePost = await call(robotRo, "robot_request", { method: "POST", path: "/boot/321/rescue", body: { os: "linux" }, confirm: true });
+  assert("R1: read-only still refuses POST /boot before fetch", rescuePost.isError && fetched === 0);
+  globalThis.fetch = realFetch;
 }
 
 process.stdout.write(`\n${passed}/${total} safety-guard checks passed\n`);

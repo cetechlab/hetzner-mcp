@@ -5,6 +5,14 @@ Changelog, and this project follows semantic versioning.
 
 ## [Unreleased]
 
+### Fixed
+- Robot reads no longer return passwords. `GET /boot/{server-number}` carries the rescue,
+  linux, vnc, windows, plesk and cpanel passwords; every credential-bearing field in a Robot
+  read response (through `robot_request` and the `robot_list_*` tools) now renders as
+  `[redacted]`, in both the compact and the verbose view. Public key material
+  (`authorized_key`, `host_key`, `key`) and every other field are unchanged. A write that
+  sets a password, such as `POST /boot/{server-number}/rescue`, still shows it once.
+
 ## [0.7.0] - 2026-09-29
 
 ### Added

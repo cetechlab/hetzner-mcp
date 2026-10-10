@@ -9,7 +9,7 @@ import type { HetznerConfig, SurfaceName } from "../config.js";
 import { hetznerRequest } from "../http.js";
 import { classifyCost, classifyDestructive, cloudServerPriceNote, normalizeCostPath } from "../cost.js";
 import { isWrite, normalizeMethod } from "../security.js";
-import { resultBlocks } from "../format.js";
+import { redactFields, resultBlocks } from "../format.js";
 import { waitForActions, actionBlocks, anyActionFailed } from "../actions.js";
 import { HetznerApiError } from "../errors.js";
 import { oneLine } from "../text.js";
@@ -139,8 +139,11 @@ function registerOne(server: McpServer, cfg: HetznerConfig, surface: SurfaceName
           body: bodyVal,
         });
         const actions = surface === "cloud" && isWrite(method) ? await waitForActions(cfg, result) : [];
+        // A Robot read can return rescue and install passwords (GET /boot/{n}). A read never
+        // needs them; a write that sets one (POST /boot/{n}/rescue) still shows it once.
+        const shown = surface === "robot" && !isWrite(method) ? redactFields(result) : result;
         return {
-          content: [...resultBlocks(result, args.verbose ?? false), ...actionBlocks(actions)],
+          content: [...resultBlocks(shown, args.verbose ?? false), ...actionBlocks(actions)],
           isError: anyActionFailed(actions),
         };
       } catch (err) {

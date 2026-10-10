@@ -109,6 +109,25 @@ function clean(v: unknown, key = ""): unknown {
   return Object.fromEntries(Object.entries(o).map(([k, x]) => [k, clean(x, k)]));
 }
 
+// Field names that carry a credential. Matched case-insensitively anywhere in the key, so
+// rescue.password, linux.password and future spellings are all caught. Public key material
+// (key, authorized_key, host_key, fingerprint) does not match and stays visible.
+const SECRET_KEY = /password|passwd|secret|token|private_key|passphrase/i;
+
+/**
+ * Deep copy of a response with every credential-bearing field replaced by "[redacted]".
+ * A null value stays null, so "no password set" is still visible. Read responses never need
+ * to carry a credential; the Robot boot endpoints return rescue and install passwords.
+ */
+export function redactFields(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(redactFields);
+  if (!value || typeof value !== "object") return value;
+  const o = value as Record<string, unknown>;
+  return Object.fromEntries(
+    Object.entries(o).map(([k, v]) => [k, SECRET_KEY.test(k) && v !== null && v !== undefined ? "[redacted]" : redactFields(v)]),
+  );
+}
+
 /** The fence line for a result that carries names, or nothing, to keep plain results small. */
 function dataNote(text: string): string | undefined {
   return /"(name|labels|description|server_name)":/.test(text) ? DATA_FENCE : undefined;
