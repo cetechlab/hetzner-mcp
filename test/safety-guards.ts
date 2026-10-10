@@ -239,6 +239,28 @@ assert("encoded ?, # and % in a path are refused", refusedEncoded === 5);
   fetched = 0;
   const rescuePost = await call(robotRo, "robot_request", { method: "POST", path: "/boot/321/rescue", body: { os: "linux" }, confirm: true });
   assert("R1: read-only still refuses POST /boot before fetch", rescuePost.isError && fetched === 0);
+
+  // Dedicated Robot read tools for firewall, boot and reset: GET only, through the read-only
+  // gate, redacted like every Robot read, and never a request without a server number.
+  const resetFixture = { reset: { server_ip: "203.0.113.10", server_number: 321, type: ["sw", "hw", "man"], operating_status: "running" } };
+  const firewallFixture = { firewall: { server_ip: "203.0.113.10", server_number: 321, status: "active", filter_ipv6: false, whitelist_hos: true, port: "main", rules: { input: [{ ip_version: "ipv4", name: "fixture-rule", dst_port: "22", protocol: "tcp", action: "accept" }], output: [] } } };
+  const fixtures: Record<string, unknown> = { "/firewall/321": firewallFixture, "/boot/321": bootFixture, "/reset/321": resetFixture };
+  globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => { fetched++; const u = new URL(String(url)); sent.push(`${init?.method ?? "GET"} ${u.host}${u.pathname}`); return new Response(JSON.stringify(fixtures[u.pathname] ?? {}), { status: 200, headers: { "content-type": "application/json" } }); }) as typeof fetch;
+  for (const [tool, path, marker] of [["robot_get_firewall", "/firewall/321", '"fixture-rule"'], ["robot_get_boot", "/boot/321", '"fingerprint":"aa:bb:cc"'], ["robot_get_reset", "/reset/321", '"operating_status":"running"']] as const) {
+    fetched = 0;
+    sent.length = 0;
+    const r = await call(robotRo, tool, { id: "321" });
+    assert(`R2: ${tool} sends exactly one GET to Robot ${path}`, fetched === 1 && sent[0] === `GET robot-ws.your-server.de${path}`);
+    assert(`R2: ${tool} returns the fixture`, !r.isError && r.text.includes(marker));
+    assert(`R2: ${tool} output carries no password`, !r.text.includes("FIXTURE_PW_CANARY"));
+    fetched = 0;
+    const missing = await call(robotRo, tool, {});
+    assert(`R2: ${tool} without an id is refused before fetch`, missing.isError && fetched === 0 && missing.text.includes("needs an id"));
+  }
+  assert("R2: robot_get_boot verbose is redacted too", !(await call(robotRo, "robot_get_boot", { id: "321", verbose: true })).text.includes("FIXTURE_PW_CANARY"));
+  fetched = 0;
+  const hwReset = await call(robotRo, "robot_request", { method: "POST", path: "/reset/321", body: { type: "hw" }, confirm: true });
+  assert("R2: a reset through robot_request is still refused before fetch in read-only mode", hwReset.isError && fetched === 0);
   globalThis.fetch = realFetch;
 }
 

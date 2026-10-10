@@ -17,6 +17,8 @@ interface ReadDef {
   paginated: boolean;
   /** Sub-resource under a required id, for example /members under /networks/{id}. */
   sub?: string;
+  /** The resource only exists per id, for example /firewall/{server-number}. */
+  idRequired?: boolean;
 }
 
 const READS: ReadDef[] = [
@@ -47,6 +49,9 @@ const READS: ReadDef[] = [
   { surface: "robot", name: "robot_list_failover", path: "/failover", desc: "List failover IPs", paginated: false },
   { surface: "robot", name: "robot_list_ssh_keys", path: "/key", desc: "List Robot SSH keys", paginated: false },
   { surface: "robot", name: "robot_list_rdns", path: "/rdns", desc: "List reverse DNS entries", paginated: false },
+  { surface: "robot", name: "robot_get_firewall", path: "/firewall", idRequired: true, desc: "Get the Robot firewall of a dedicated server: status, whitelist and rules. Pass the server number as id", paginated: false },
+  { surface: "robot", name: "robot_get_boot", path: "/boot", idRequired: true, desc: "Get the boot configuration of a dedicated server: rescue, linux, vnc, windows, plesk and cpanel, with passwords redacted. Pass the server number as id", paginated: false },
+  { surface: "robot", name: "robot_get_reset", path: "/reset", idRequired: true, desc: "Get the reset options and operating status of a dedicated server. Does not reset anything. Pass the server number as id", paginated: false },
 ];
 
 type ReadArgs = { id?: string; query?: Record<string, string | number | boolean>; verbose?: boolean };
@@ -54,7 +59,7 @@ type ReadArgs = { id?: string; query?: Record<string, string | number | boolean>
 function makeReadHandler(cfg: HetznerConfig, def: ReadDef) {
   return async (args: ReadArgs) => {
     try {
-      if (def.sub && !args.id) throw new Error(`${def.name} needs an id`);
+      if ((def.sub || def.idRequired) && !args.id) throw new Error(`${def.name} needs an id`);
       const path = args.id ? `${def.path}/${encodeURIComponent(args.id)}${def.sub ?? ""}` : def.path;
       const query =
         def.paginated && (!args.id || def.sub) ? { per_page: 50, ...(args.query ?? {}) } : args.query;

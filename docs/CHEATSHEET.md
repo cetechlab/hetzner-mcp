@@ -31,7 +31,7 @@ cloud_list_server_types, cloud_list_locations, cloud_list_network_members, cloud
 infra_audit, spend_history,
 storagebox_list, storagebox_list_types, robot_list_servers, robot_list_ips,
 robot_list_subnets, robot_list_vswitches, robot_list_failover, robot_list_ssh_keys,
-robot_list_rdns. Plus contribute_or_report.
+robot_list_rdns, robot_get_firewall, robot_get_boot, robot_get_reset. Plus contribute_or_report.
 
 ## Safety quick rules
 

@@ -5,6 +5,15 @@ Changelog, and this project follows semantic versioning.
 
 ## [Unreleased]
 
+### Added
+- `robot_get_firewall`, `robot_get_boot` and `robot_get_reset`: curated, read-only Robot tools
+  for `GET /firewall/{server-number}`, `GET /boot/{server-number}` and
+  `GET /reset/{server-number}`. Pass the server number as `id`. They sit beside the
+  `robot_list_*` tools in the full tool set (not in lean), send GET only, honour
+  `HETZNER_MCP_READONLY`, and return passwords redacted. Before, a client that excluded
+  `robot_request` could not see a dedicated server's firewall, boot configuration or reset
+  status at all.
+
 ### Fixed
 - Robot reads no longer return passwords. `GET /boot/{server-number}` carries the rescue,
   linux, vnc, windows, plesk and cpanel passwords; every credential-bearing field in a Robot
