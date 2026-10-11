@@ -2,7 +2,7 @@
 // confirm, and every delete needs confirm, before the request runs.
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { HetznerConfig } from "../config.js";
+import { READ_ONLY_REFUSAL, type HetznerConfig } from "../config.js";
 import { hetznerRequest } from "../http.js";
 import { classifyCost, classifyDestructive } from "../cost.js";
 import { waitForActions, actionBlocks, anyActionFailed } from "../actions.js";
@@ -31,7 +31,7 @@ async function guarded(
     confirm?: boolean;
   },
 ): Promise<ReturnType<typeof text>> {
-  if (cfg.readOnly) return text("Refused. The server is in read-only mode (HETZNER_MCP_READONLY=1).", true);
+  if (cfg.readOnly) return text(READ_ONLY_REFUSAL, true);
   const cost = classifyCost("cloud", opts.method, opts.path);
   if (cost.billed) {
     if (!cfg.allowBilled) return text("Blocked. Billed operations are disabled. Set HETZNER_MCP_ALLOW_BILLED=1 to allow billed creates with confirm.", true);

@@ -268,6 +268,14 @@ Upgrading from 0.4? Paid resources are now off by default. Rerun `npx hetzner-mc
 
 A wrong API call should never cost you money you did not intend. This tool is built around that.
 
+Read-only by default (changed security behaviour, documented under ORA 2.3 §21.1). The server
+refuses every write (POST, PUT, PATCH, DELETE) unless `HETZNER_MCP_ALLOW_WRITES=1` is set, and
+`HETZNER_MCP_READONLY=1` still forces read-only on top of that. The check sits in the one
+function that sends requests to Hetzner, so it fails closed: a misspelt variable, a value such as
+`true` or `yes`, or a tool that forgets its own check all leave the server read-only. Before, a
+write went out unless `HETZNER_MCP_READONLY` was spelt exactly right. Upgrading? Add
+`HETZNER_MCP_ALLOW_WRITES=1` to your client config to keep creates and deletes working.
+
 - Every list and get is free on Hetzner. Use them as much as you like.
 - Resources that are free to create, such as SSH keys, networks, firewalls, and placement groups, are created normally.
 - Resources that cost money, such as servers, volumes, load balancers, floating and primary IPs, and storage boxes, are guarded. Billed creation is off until you set `HETZNER_MCP_ALLOW_BILLED=1`, and even then the tool refuses each one unless you pass an explicit confirm, after it fetches and shows you the live hourly and monthly price.

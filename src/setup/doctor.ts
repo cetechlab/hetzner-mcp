@@ -85,7 +85,7 @@ export async function runDoctor(argv: string[]): Promise<number> {
   const surfaces = availableSurfaces(cfg);
   out("");
   out(`  ${dim("Surfaces in this shell.")} ${surfaces.length ? surfaces.join(", ") : "none"}`);
-  out(`  ${dim("Write mode.")} ${cfg.readOnly ? "read-only (HETZNER_MCP_READONLY=1)" : "read and write"}`);
+  out(`  ${dim("Write mode.")} ${cfg.readOnly ? "read-only (writes need HETZNER_MCP_ALLOW_WRITES=1)" : "read and write"}`);
   out(`  ${dim("Billed creates.")} ${cfg.allowBilled ? "allowed with confirm (HETZNER_MCP_ALLOW_BILLED=1)" : "blocked (set HETZNER_MCP_ALLOW_BILLED=1 to enable)"}`);
 
   // Which known apps have hetzner wired, and whether the token saved there still works.

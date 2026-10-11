@@ -154,7 +154,7 @@ const baseEnv = (extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv => ({ XDG_CON
   assert("a cached map does not pile up notes on repeat calls", (again.match(/Costs are estimates/g) ?? []).length === 1);
   await handlers.infra_audit!({ refresh: true });
   assert("refresh=true reads Hetzner again", stats.calls === 2 * oneRead);
-  await hetznerRequest(cfg, { surface: "cloud", method: "POST", path: "/servers/1/actions/poweron" }).catch(() => undefined);
+  await hetznerRequest({ ...cfg, readOnly: false }, { surface: "cloud", method: "POST", path: "/servers/1/actions/poweron" }).catch(() => undefined);
   const beforeRead = stats.calls;
   await handlers.infra_audit!({});
   assert("a write drops the cached map, the next call reads again", stats.calls > beforeRead + 1);
@@ -272,7 +272,7 @@ const emptyGraph = (workspace?: string): InfraGraph => ({ source: "live", genera
   resetStatusMemory();
   const t0 = 2_000_000;
   await collectStatuses(cfg, env, { now: t0 });
-  await hetznerRequest(cfg, { surface: "cloud", method: "POST", path: "/servers/1/actions/poweron" }).catch(() => undefined);
+  await hetznerRequest({ ...cfg, readOnly: false }, { surface: "cloud", method: "POST", path: "/servers/1/actions/poweron" }).catch(() => undefined);
   const beforePoll = stats.calls;
   const polled = await collectStatuses(cfg, env, { now: t0 + POLL_MS_PER_PAGE });
   assert("after a write the next status poll reads a large project again", stats.calls > beforePoll && !polled.deferredProjects);
@@ -284,7 +284,7 @@ const emptyGraph = (workspace?: string): InfraGraph => ({ source: "live", genera
     await get(h.port, "/api/graph");
     await get(h.port, "/api/graph");
     const cachedReads = reads;
-    await hetznerRequest(cfg, { surface: "cloud", method: "POST", path: "/servers/1/actions/poweron" }).catch(() => undefined);
+    await hetznerRequest({ ...cfg, readOnly: false }, { surface: "cloud", method: "POST", path: "/servers/1/actions/poweron" }).catch(() => undefined);
     await get(h.port, "/api/graph");
     assert("a write from a tool in the same process drops the map server's cached graph", cachedReads === 1 && reads === 2, `reads=${reads}`);
   } finally {

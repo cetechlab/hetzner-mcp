@@ -27,7 +27,11 @@ export interface HetznerConfig {
   /** Robot webservice user, for the dedicated-server surface only. */
   robotUser: string | undefined;
   robotPassword: string | undefined;
-  /** When true, every write (POST/PUT/PATCH/DELETE) is refused. */
+  /**
+   * When true, every write (POST/PUT/PATCH/DELETE) is refused. Fail-closed: it is false only
+   * when HETZNER_MCP_ALLOW_WRITES is exactly "1" and HETZNER_MCP_READONLY is not "1", and
+   * hetznerRequest opens writes only for readOnly === false.
+   */
   readOnly: boolean;
   /** When true (env set to "1"), billed creates are allowed with per-call confirm. Default off. */
   allowBilled: boolean;
@@ -38,6 +42,10 @@ export interface HetznerConfig {
   /** How long a write waits for its Hetzner actions to finish. 0 disables waiting. */
   actionWaitMs: number;
 }
+
+/** The one refusal text for a write in read-only mode. Names the switches, never a value. */
+export const READ_ONLY_REFUSAL =
+  "Refused. The server is read-only. Writes need HETZNER_MCP_ALLOW_WRITES=1, and HETZNER_MCP_READONLY must not be 1.";
 
 function positiveInt(value: string | undefined, fallback: number): number {
   if (!value) return fallback;
@@ -63,7 +71,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): HetznerConfig 
     ...(cloud.error ? { cloudTokenError: cloud.error } : {}),
     robotUser: env.HETZNER_ROBOT_USER?.trim() || undefined,
     robotPassword: env.HETZNER_ROBOT_PASSWORD || undefined,
-    readOnly: env.HETZNER_MCP_READONLY === "1",
+    // Fail-closed. Writes need the exact opt-in; a missing, misspelt or odd value stays read-only,
+    // and HETZNER_MCP_READONLY=1 still forces read-only on top of an opt-in.
+    readOnly: !(env.HETZNER_MCP_ALLOW_WRITES === "1" && env.HETZNER_MCP_READONLY !== "1"),
     // Opt-in. unset / empty / anything other than "1" blocks billed creates even with confirm.
     allowBilled: env.HETZNER_MCP_ALLOW_BILLED === "1",
     timeoutMs: positiveInt(env.HETZNER_MCP_TIMEOUT_MS, 30000),

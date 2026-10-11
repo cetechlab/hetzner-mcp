@@ -5,6 +5,13 @@ Changelog, and this project follows semantic versioning.
 
 ## [Unreleased]
 
+### Changed
+- Read-only by default, fail-closed. `hetznerRequest`, the one function that sends requests to
+  Hetzner, refuses every POST, PUT, PATCH and DELETE before anything leaves the machine unless
+  `HETZNER_MCP_ALLOW_WRITES=1` is set and `HETZNER_MCP_READONLY` is not `1`. A misspelt
+  variable, a value like `true`, a config built without the flag, or a tool that skips its own
+  check now stays read-only. Breaking: add `HETZNER_MCP_ALLOW_WRITES=1` to keep writes.
+
 ### Added
 - `robot_get_firewall`, `robot_get_boot` and `robot_get_reset`: curated, read-only Robot tools
   for `GET /firewall/{server-number}`, `GET /boot/{server-number}` and

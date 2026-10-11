@@ -2,9 +2,9 @@
  * The HTTP client for all three Hetzner surfaces.
  * This module is the only place that touches credentials or the network.
  */
-import { SURFACES, isTokenShape, type SurfaceName, type HetznerConfig } from "./config.js";
+import { SURFACES, isTokenShape, READ_ONLY_REFUSAL, type SurfaceName, type HetznerConfig } from "./config.js";
 import { HetznerApiError, redactSecrets } from "./errors.js";
-import { normalizePath, normalizeMethod } from "./security.js";
+import { normalizePath, normalizeMethod, isWrite } from "./security.js";
 import { USER_AGENT } from "./version.js";
 import { invalidateGraphs } from "./map/graph-cache.js";
 
@@ -140,6 +140,13 @@ export async function hetznerRequest(cfg: HetznerConfig, opts: RequestOpts): Pro
   const def = SURFACES[surface];
   const method = normalizeMethod(opts.method);
   const path = normalizePath(opts.path);
+
+  // The write gate. Every tool reaches Hetzner through here, so this is the check that cannot
+  // be skipped: a write goes out only when the config explicitly says readOnly === false.
+  // A tool that forgets its own check, or a config built without the flag, stays read-only.
+  if (isWrite(method) && cfg.readOnly !== false) {
+    throw new HetznerApiError(surface, 0, "writes_disabled", READ_ONLY_REFUSAL);
+  }
 
   const url = new URL(def.base + path);
   if (opts.query) {

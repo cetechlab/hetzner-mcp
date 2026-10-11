@@ -1,6 +1,6 @@
 // Create, delete and connect from the map. Every call re-validates on the server, re-prices,
 // and applies the same cost, read-only and destructive guards as the MCP tools.
-import type { HetznerConfig } from "../config.js";
+import { READ_ONLY_REFUSAL, type HetznerConfig } from "../config.js";
 import { hetznerRequest } from "../http.js";
 import { classifyCost } from "../cost.js";
 import { waitForActions } from "../actions.js";
@@ -259,7 +259,7 @@ export async function plan(a: ActionEnv, ref: ProjectRef, kindIn: unknown, param
   const billed = classifyCost("cloud", "POST", out.path).billed;
   let blocked: string | undefined;
   if (a.demo) blocked = "This is sample data. Start the live map to create real resources.";
-  else if (a.base.readOnly) blocked = "Read-only mode is on (HETZNER_MCP_READONLY=1).";
+  else if (a.base.readOnly) blocked = READ_ONLY_REFUSAL;
   else if (billed && !a.base.allowBilled) blocked = "Billed creates are off. Restart the map with HETZNER_MCP_ALLOW_BILLED=1 to allow them.";
   return { ...out, billed, currency: c.currency, blocked };
 }
@@ -308,13 +308,13 @@ export async function deletePlan(a: ActionEnv, nodeId: unknown) {
   }
   if (t.code === "net") notes.push("Servers in this network lose their private address.");
   if (a.demo) blocked = "This is sample data. Nothing can be deleted here.";
-  else if (a.base.readOnly) blocked = "Read-only mode is on (HETZNER_MCP_READONLY=1).";
+  else if (a.base.readOnly) blocked = READ_ONLY_REFUSAL;
   return { name: t.name, label: t.path, notes, blocked };
 }
 
 export async function deleteNode(a: ActionEnv, nodeId: unknown, typed: unknown): Promise<string> {
   if (a.demo) throw new ActionError(403, "This is sample data. Nothing can be deleted here.");
-  if (a.base.readOnly) throw new ActionError(403, "Read-only mode is on (HETZNER_MCP_READONLY=1).");
+  if (a.base.readOnly) throw new ActionError(403, READ_ONLY_REFUSAL);
   const pl = await deletePlan(a, nodeId);
   if (pl.blocked) throw new ActionError(409, pl.blocked);
   if (typed !== pl.name) throw new ActionError(400, "The name you typed does not match.");

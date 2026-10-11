@@ -5,7 +5,7 @@
  */
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { HetznerConfig, SurfaceName } from "../config.js";
+import { READ_ONLY_REFUSAL, type HetznerConfig, type SurfaceName } from "../config.js";
 import { hetznerRequest } from "../http.js";
 import { classifyCost, classifyDestructive, cloudServerPriceNote, normalizeCostPath } from "../cost.js";
 import { isWrite, normalizeMethod } from "../security.js";
@@ -97,7 +97,7 @@ function registerOne(server: McpServer, cfg: HetznerConfig, surface: SurfaceName
         }
         if (isWrite(method) && cfg.readOnly) {
           return textResult(
-            `Refused. The server is in read-only mode (HETZNER_MCP_READONLY=1), so ${method} requests are not allowed.`,
+            READ_ONLY_REFUSAL,
             true,
           );
         }
