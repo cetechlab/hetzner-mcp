@@ -231,8 +231,10 @@ assert("encoded ?, # and % in a path are refused", refusedEncoded === 5);
   const sent: string[] = [];
   globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => { fetched++; sent.push(`${init?.method ?? "GET"} ${String(url)}`); return new Response(JSON.stringify(bootFixture), { status: 200, headers: { "content-type": "application/json" } }); }) as typeof fetch;
   fetched = 0;
+  // robot_request is only offered when writes are on, and its reads are redacted there too.
+  const robotRw = loadConfig({ HETZNER_ROBOT_USER: "fixture-user", HETZNER_ROBOT_PASSWORD: "fixture-pass", HETZNER_MCP_ALLOW_WRITES: "1" });
   for (const verbose of [false, true]) {
-    const r = await call(robotRo, "robot_request", { method: "GET", path: "/boot/321", verbose });
+    const r = await call(robotRw, "robot_request", { method: "GET", path: "/boot/321", verbose });
     assert(`R1: robot_request GET /boot ${verbose ? "verbose" : "compact"} is redacted`, !r.isError && !r.text.includes("FIXTURE_PW_CANARY") && r.text.includes("[redacted]"));
   }
   assert("R1: the boot reads went out as GET to Robot", fetched === 2 && sent.every((s) => s === "GET https://robot-ws.your-server.de/boot/321"));

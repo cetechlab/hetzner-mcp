@@ -11,6 +11,11 @@ Changelog, and this project follows semantic versioning.
   `HETZNER_MCP_ALLOW_WRITES=1` is set and `HETZNER_MCP_READONLY` is not `1`. A misspelt
   variable, a value like `true`, a config built without the flag, or a tool that skips its own
   check now stays read-only. Breaking: add `HETZNER_MCP_ALLOW_WRITES=1` to keep writes.
+- A read-only server lists only tools that read. The Cloud create, delete, attach, detach,
+  assign and unassign tools and `robot_request` are not registered, and `cloud_request` and
+  `storagebox_request` offer GET only, with no body or confirm. Before, a read-only server
+  listed 62 tools, 25 of which could only answer "Refused"; now it lists 37. In lean mode a
+  read-only server keeps the Robot read tools, since it has no `robot_request` to read with.
 
 ### Added
 - `robot_get_firewall`, `robot_get_boot` and `robot_get_reset`: curated, read-only Robot tools

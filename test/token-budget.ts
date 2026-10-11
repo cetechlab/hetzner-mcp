@@ -16,7 +16,8 @@ function assert(label: string, cond: boolean): void {
   process.stdout.write(`${cond ? "OK  " : "FAIL"} ${label}\n`);
 }
 
-const cfg = loadConfig({ HETZNER_CLOUD_TOKEN: "x".repeat(64), HETZNER_ROBOT_USER: "u", HETZNER_ROBOT_PASSWORD: "p" });
+// Writes on: the largest tool list a client can be offered. A read-only server lists fewer.
+const cfg = loadConfig({ HETZNER_CLOUD_TOKEN: "x".repeat(64), HETZNER_ROBOT_USER: "u", HETZNER_ROBOT_PASSWORD: "p", HETZNER_MCP_ALLOW_WRITES: "1" });
 async function list(env: NodeJS.ProcessEnv) {
   const server = new McpServer({ name: "hetzner-mcp", version: "test" });
   registerAllTools(server, cfg, env);

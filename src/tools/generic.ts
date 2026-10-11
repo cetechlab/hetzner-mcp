@@ -41,40 +41,50 @@ const SURFACE_LABEL: Record<SurfaceName, string> = {
   robot: "Hetzner Robot dedicated servers (robot-ws.your-server.de)",
 };
 
-function registerOne(server: McpServer, cfg: HetznerConfig, surface: SurfaceName): void {
+const requestShape = {
+  method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]).optional().describe("HTTP method. Defaults to GET."),
+  path: z.string().min(1).describe("Relative API path, for example /servers or /servers/123."),
+  query: z
+    .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+    .optional()
+    .describe("Query string parameters."),
+  body: z
+    .union([z.record(z.string(), z.unknown()), z.string()])
+    .optional()
+    .describe(
+      "Request body for write methods, as a JSON object, for example " +
+        '{"name":"web1","type":"spread"}. A JSON string is also accepted and parsed.',
+    ),
+  confirm: z
+    .boolean()
+    .optional()
+    .describe("Must be true to create a billed resource. Reads and free resources do not need it."),
+  verbose: z
+    .boolean()
+    .optional()
+    .describe("Return the full payload. Default false returns a compact, token-efficient view."),
+};
+
+// The GET form a read-only server offers: no write methods, no body, no confirm. Its arguments
+// are a subset of the full form, so the one handler below serves both.
+const getOnlyShape = {
+  method: z.enum(["GET"]).optional().describe("HTTP method. Only GET: the server is read-only."),
+  path: requestShape.path,
+  query: requestShape.query,
+  verbose: requestShape.verbose,
+} as unknown as typeof requestShape;
+
+function registerOne(server: McpServer, cfg: HetznerConfig, surface: SurfaceName, getOnly = false): void {
   server.registerTool(
     `${surface}_request`,
     {
       title: `${surface} raw request`,
-      description:
-        `Call any ${SURFACE_LABEL[surface]} endpoint directly. Use a relative path like /servers. ` +
-        `Reads are free. Writes obey the read-only and cost guards. ${CONTRIBUTE_HINT}`,
-      inputSchema: {
-        method: z
-          .enum(["GET", "POST", "PUT", "PATCH", "DELETE"])
-          .optional()
-          .describe("HTTP method. Defaults to GET."),
-        path: z.string().min(1).describe("Relative API path, for example /servers or /servers/123."),
-        query: z
-          .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
-          .optional()
-          .describe("Query string parameters."),
-        body: z
-          .union([z.record(z.string(), z.unknown()), z.string()])
-          .optional()
-          .describe(
-            "Request body for write methods, as a JSON object, for example " +
-              '{"name":"web1","type":"spread"}. A JSON string is also accepted and parsed.',
-          ),
-        confirm: z
-          .boolean()
-          .optional()
-          .describe("Must be true to create a billed resource. Reads and free resources do not need it."),
-        verbose: z
-          .boolean()
-          .optional()
-          .describe("Return the full payload. Default false returns a compact, token-efficient view."),
-      },
+      description: getOnly
+        ? `Read any ${SURFACE_LABEL[surface]} endpoint with GET. Use a relative path like /servers. ` +
+          `The server is read-only, so no other method is offered. ${CONTRIBUTE_HINT}`
+        : `Call any ${SURFACE_LABEL[surface]} endpoint directly. Use a relative path like /servers. ` +
+          `Reads are free. Writes obey the read-only and cost guards. ${CONTRIBUTE_HINT}`,
+      inputSchema: getOnly ? getOnlyShape : requestShape,
     },
     async (args) => {
       try {
@@ -154,7 +164,11 @@ function registerOne(server: McpServer, cfg: HetznerConfig, surface: SurfaceName
 }
 
 export function registerGenericTools(server: McpServer, cfg: HetznerConfig): void {
-  registerOne(server, cfg, "cloud");
-  registerOne(server, cfg, "storagebox");
-  registerOne(server, cfg, "robot");
+  // Fail-closed like the gate in hetznerRequest: only readOnly === false offers writes.
+  const readOnly = cfg.readOnly !== false;
+  registerOne(server, cfg, "cloud", readOnly);
+  registerOne(server, cfg, "storagebox", readOnly);
+  // Read-only: no robot_request. Every Robot read has a curated, redacted tool, and the raw
+  // tool would reach the reads deliberately left out, such as order transactions.
+  if (!readOnly) registerOne(server, cfg, "robot");
 }

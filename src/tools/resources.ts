@@ -76,8 +76,9 @@ function makeReadHandler(cfg: HetznerConfig, def: ReadDef) {
   };
 }
 
-export function registerReadTools(server: McpServer, cfg: HetznerConfig): void {
+export function registerReadTools(server: McpServer, cfg: HetznerConfig, opts: { robotOnly?: boolean } = {}): void {
   for (const def of READS) {
+    if (opts.robotOnly && def.surface !== "robot") continue;
     server.registerTool(
       def.name,
       {

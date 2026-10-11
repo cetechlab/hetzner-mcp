@@ -19,8 +19,15 @@ export function isLean(env: NodeJS.ProcessEnv = process.env): boolean {
 export function registerAllTools(server: McpServer, cfg: HetznerConfig, env: NodeJS.ProcessEnv = process.env): void {
   registerGenericTools(server, cfg);
   if (!isLean(env)) registerReadTools(server, cfg);
-  registerWriteTools(server, cfg);
-  registerCloudWriteTools(server, cfg);
+  // Lean relies on the raw request tools for reads. A read-only server has no robot_request,
+  // so it keeps the Robot read tools even in lean, or Robot could not be read at all.
+  else if (cfg.readOnly !== false) registerReadTools(server, cfg, { robotOnly: true });
+  // A read-only server lists no tool that could send a write (the gate in hetznerRequest
+  // would refuse it anyway). Only readOnly === false offers them.
+  if (cfg.readOnly === false) {
+    registerWriteTools(server, cfg);
+    registerCloudWriteTools(server, cfg);
+  }
   registerContributeTool(server);
   registerMapTool(server, cfg);
   registerAuditTool(server, cfg);

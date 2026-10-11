@@ -276,6 +276,10 @@ function that sends requests to Hetzner, so it fails closed: a misspelt variable
 write went out unless `HETZNER_MCP_READONLY` was spelt exactly right. Upgrading? Add
 `HETZNER_MCP_ALLOW_WRITES=1` to your client config to keep creates and deletes working.
 
+A read-only server also lists only tools that read. The create, delete, attach and assign tools
+and `robot_request` are not offered at all, and `cloud_request` and `storagebox_request` accept
+GET only. Robot reads go through the curated, redacted `robot_*` tools.
+
 - Every list and get is free on Hetzner. Use them as much as you like.
 - Resources that are free to create, such as SSH keys, networks, firewalls, and placement groups, are created normally.
 - Resources that cost money, such as servers, volumes, load balancers, floating and primary IPs, and storage boxes, are guarded. Billed creation is off until you set `HETZNER_MCP_ALLOW_BILLED=1`, and even then the tool refuses each one unless you pass an explicit confirm, after it fetches and shows you the live hourly and monthly price.
