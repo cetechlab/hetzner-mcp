@@ -4,7 +4,7 @@
  */
 import { SURFACES, isTokenShape, READ_ONLY_REFUSAL, type SurfaceName, type HetznerConfig } from "./config.js";
 import { HetznerApiError, redactSecrets } from "./errors.js";
-import { normalizePath, normalizeMethod, isWrite } from "./security.js";
+import { normalizePath, normalizeMethod, isWrite, isReadOnlyPost } from "./security.js";
 import { USER_AGENT } from "./version.js";
 import { invalidateGraphs } from "./map/graph-cache.js";
 
@@ -144,7 +144,9 @@ export async function hetznerRequest(cfg: HetznerConfig, opts: RequestOpts): Pro
   // The write gate. Every tool reaches Hetzner through here, so this is the check that cannot
   // be skipped: a write goes out only when the config explicitly says readOnly === false.
   // A tool that forgets its own check, or a config built without the flag, stays read-only.
-  if (isWrite(method) && cfg.readOnly !== false) {
+  // One named exception: Robot's traffic query, a read Robot only accepts as POST.
+  const changes = isWrite(method) && !isReadOnlyPost(surface, method, path);
+  if (changes && cfg.readOnly !== false) {
     throw new HetznerApiError(surface, 0, "writes_disabled", READ_ONLY_REFUSAL);
   }
 
@@ -198,7 +200,7 @@ export async function hetznerRequest(cfg: HetznerConfig, opts: RequestOpts): Pro
   } finally {
     release();
     // Any write may change what the map shows, so cached maps are dropped whatever the outcome.
-    if (method !== "GET" && method !== "HEAD") invalidateGraphs();
+    if (changes) invalidateGraphs();
   }
   let json: unknown;
   if (text) {

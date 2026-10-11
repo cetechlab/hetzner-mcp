@@ -38,7 +38,9 @@ process.stdout.write(`lean: tools=${lean.length} list=${leanChars} chars (about 
 // Budgets sit just above the measured size, so any growth fails here first. Lower them, never raise casually.
 // Raised by the size of spend_history (about 530 chars) when it was added.
 // Raised by the size of robot_get_firewall, robot_get_boot and robot_get_reset (about 1830 chars) when they were added.
-assert("full tool list stays under 40200 chars", listChars < 40200);
+// Raised by full Robot read coverage (seven tools, id shapes and views, about 5540 chars) when it was added.
+// A read-only server lists 25 fewer tools; Hermes and other clients can also allowlist tools.
+assert("full tool list stays under 45800 chars", listChars < 45800);
 assert("lean tool list stays under 24600 chars", leanChars < 24600);
 assert("lean keeps the request, write, map, audit and spend tools", ["cloud_request", "cloud_create_server", "infra_map", "infra_audit", "spend_history"].every((n) => lean.some((t) => t.name === n)));
 assert("lean drops the list shortcuts", !lean.some((t) => t.name === "cloud_list_servers"));

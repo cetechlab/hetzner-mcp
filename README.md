@@ -161,6 +161,15 @@ The single most important promise. **Reading and listing are always free, and th
 
 All three are live tested against a real account. See [docs/ENDPOINT-AUDIT.md](docs/ENDPOINT-AUDIT.md) for the exact, dated, per endpoint results.
 
+Every Robot read has its own tool: servers and their cancellation status, IPs and subnets with
+their MACs, reverse DNS, failover IPs, SSH keys, firewalls and firewall templates, every boot
+option and its last activation, reset and Wake on LAN status, vSwitches, traffic statistics,
+and the server, Server Auction and addon catalogues. Passwords in any Robot answer are
+redacted, and ids are checked before they go into a path. Order history and the legacy Robot
+Storage Box endpoints are left out on purpose; [docs/ROBOT-READS.md](docs/ROBOT-READS.md) lists
+all 50 documented reads and says which tool serves each, or why it is left out. These tools are
+tested offline against the documented request shapes, not yet against a live account.
+
 ## See your whole estate on one canvas
 
 Open a live map of every project, server, network, volume, firewall, load balancer, IP, snapshot, storage box, and dedicated server you run on Hetzner, with the monthly cost on every card.

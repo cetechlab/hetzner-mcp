@@ -14,10 +14,27 @@ Changelog, and this project follows semantic versioning.
 - A read-only server lists only tools that read. The Cloud create, delete, attach, detach,
   assign and unassign tools and `robot_request` are not registered, and `cloud_request` and
   `storagebox_request` offer GET only, with no body or confirm. Before, a read-only server
-  listed 62 tools, 25 of which could only answer "Refused"; now it lists 37. In lean mode a
+  listed 62 tools, 25 of which could only answer "Refused"; now it lists 44, with the Robot
+  read tools added below. In lean mode a
   read-only server keeps the Robot read tools, since it has no `robot_request` to read with.
+- Robot ids are checked before they go into a path: server numbers and numeric ids are
+  digits, addresses are plain IPv4 or IPv6 without a mask, fingerprints are MD5 hex pairs,
+  product ids start with a letter. A malformed id is refused before any request; before, an id
+  such as `321/cancellation` was encoded and sent. Robot tools reject unknown arguments.
 
 ### Added
+- Full Robot read coverage: all 50 read endpoints in the Robot webservice documentation are
+  served by a tool or left out with a reason ([docs/ROBOT-READS.md](docs/ROBOT-READS.md)).
+  New tools: `robot_list_firewall_templates`, `robot_get_wol`, `robot_get_traffic`,
+  `robot_list_server_products`, `robot_list_server_market`, `robot_list_server_addons` and
+  `robot_get_order_currency`. New `view` argument: `cancellation` on `robot_list_servers`;
+  `mac` and `cancellation` on `robot_list_ips` and `robot_list_subnets`; `rescue`,
+  `rescue_last`, `linux`, `linux_last`, `vnc` and `windows` on `robot_get_boot`.
+  `robot_get_reset` without an id lists every server. Left out: order transactions (they can
+  return a root password) and the legacy Robot Storage Box endpoints.
+- `POST /traffic` is the one POST the read-only gate lets out: Robot answers a traffic query
+  only to POST, and it changes nothing. Only Robot, only that exact path.
+
 - `robot_get_firewall`, `robot_get_boot` and `robot_get_reset`: curated, read-only Robot tools
   for `GET /firewall/{server-number}`, `GET /boot/{server-number}` and
   `GET /reset/{server-number}`. Pass the server number as `id`. They sit beside the

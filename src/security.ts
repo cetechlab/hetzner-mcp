@@ -59,6 +59,15 @@ export function normalizeMethod(method: string | undefined): string {
   return m;
 }
 
+/**
+ * The one POST that only reads. Robot answers a traffic query only to POST /traffic, and it
+ * changes nothing, so the read-only gate lets exactly this out: Robot, POST, the path
+ * "/traffic" after normalizePath and nothing else (no sub-path, no query, no other surface).
+ */
+export function isReadOnlyPost(surface: string, method: string, path: string): boolean {
+  return surface === "robot" && method === "POST" && path === "/traffic";
+}
+
 export function isWrite(method: string): boolean {
   return WRITE_METHODS.has(method.toUpperCase());
 }

@@ -255,6 +255,8 @@ assert("encoded ?, # and % in a path are refused", refusedEncoded === 5);
     assert(`R2: ${tool} sends exactly one GET to Robot ${path}`, fetched === 1 && sent[0] === `GET robot-ws.your-server.de${path}`);
     assert(`R2: ${tool} returns the fixture`, !r.isError && r.text.includes(marker));
     assert(`R2: ${tool} output carries no password`, !r.text.includes("FIXTURE_PW_CANARY"));
+    // GET /reset without a number lists every server's reset options, so only the other two need one.
+    if (tool === "robot_get_reset") continue;
     fetched = 0;
     const missing = await call(robotRo, tool, {});
     assert(`R2: ${tool} without an id is refused before fetch`, missing.isError && fetched === 0 && missing.text.includes("needs an id"));
